@@ -1,0 +1,13 @@
+{
+  "mug-chip.jpg": {
+    "product": "White ceramic coffee mug",
+    "description": "The rim arrived chipped",
+    "code": "K7Q4",
+    "expected": "minor"
+  },
+  "lamp-broken.jpg": {
+    "product": "Glass table lamp",
+    "description": "Base is cracked all the way through",
+    "expected": "severe"
+  }
+}

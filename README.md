@@ -45,14 +45,39 @@ Options:
 
 Refunds send a `PayPal-Request-Id`, so re-running the same refund doesn't refund twice.
 
+## Week 1: damage grading prototype
+
+The grader sends claim photos to Gemini (Google AI Studio) and gets back strict JSON, validated with zod:
+defects (type, location, severity), overall severity, functional impact, confidence, whether it's a real
+camera photo, whether it matches the claimed item, and the live-capture code it reads in the photo.
+
+1. Add `GEMINI_API_KEY` to `.env` (from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
+2. Put JPEG/PNG photos in `samples/`. Export iPhone HEIC photos as JPEG first.
+3. Optionally copy `samples/manifest.example.json` to `samples/manifest.json` and give each photo its product, buyer description, code and expected severity.
+4. Run:
+
+```bash
+npm run grade
+```
+
+Each photo is graded twice by default (`--runs 3` for more). The script reports whether the runs agreed,
+whether the grade is within one level of what you expected, and whether the code matched. Full JSON goes to `results/`.
+
+Model: `gemini-3.5-flash` with low thinking, about 3s per grade. Set `GEMINI_MODEL` to try others.
+Newer Flash models also worked but took 30–120s on the free tier under load (Oct 2026).
+
+Free-tier note: Google may use free-tier inputs to improve its products. Use test photos only, and a paid key for real buyer photos.
+
 ## Code
 
 - `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
 - `scripts/paypal-week1.ts`: the Week 1 end-to-end script.
+- `src/lib/grading.ts`: Gemini damage grader (schema, prompt, retries, code check).
+- `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
 
 ## Timeline
 
-- **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype on 15–20 photos.
+- **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
 - **Week 2 (Oct 26–Nov 1):** claim page, rules engine, one-round negotiation, real refunds.
 - **Week 3 (Nov 2–8):** AG Grid dashboard, fraud checks, deploy with seeded demo orders.
 - **Nov 9–12:** README, video, submit by Nov 11.

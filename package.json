@@ -8,12 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "paypal:week1": "tsx scripts/paypal-week1.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "grade": "tsx scripts/grade-photos.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "next": "15.5.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
