@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClipPay
 
-## Getting Started
+AI-graded damage claims that settle with a partial PayPal refund instead of a full return.
+Built for the PayPal AI hackathon (deadline Nov 12, 2026).
 
-First, run the development server:
+Planned demo URL: `clippay.productivityappsforwindows.com` (separate Cloudflare project; the main site links to it).
+
+## Flow
+
+1. Buyer pays (PayPal Orders v2: create + capture).
+2. Buyer opens a claim link, uploads photos holding a live-capture code, and describes the damage.
+3. A vision model grades the defect (type, location, severity) as strict JSON.
+4. A rules engine (not the AI) turns the grade into an offer using the merchant's policy.
+5. Buyer accepts or counters once; anything above the ceiling goes to merchant review.
+6. On acceptance, a partial refund is issued on the captured payment (Payments v2 refund).
+7. The merchant dashboard (AG Grid) shows claims, grades, refunds and savings versus full returns.
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Go to [developer.paypal.com](https://developer.paypal.com) → **Apps & Credentials** → **Sandbox** → **Create App** (Merchant).
+2. Paste the app's Client ID and Secret into `.env`.
+3. Under **Testing Tools → Sandbox Accounts**, note the default **Personal** (buyer) account. You'll log in with it to approve test payments.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Week 1: sandbox refund check
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run paypal:week1
+```
 
-## Learn More
+This creates a $40 order, prints an approval link, waits while you approve it with the sandbox buyer
+account, captures the payment, refunds 30%, and re-reads the capture to confirm `PARTIALLY_REFUNDED`.
 
-To learn more about Next.js, take a look at the following resources:
+Options:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | What it does |
+| --- | --- |
+| `npm run paypal:week1 -- --amount 80 --refund-pct 25` | Different order size and refund share |
+| `npm run paypal:week1 -- --order <orderId>` | Resume: capture an order you already approved |
+| `npm run paypal:week1 -- --capture <captureId> --refund 5.00` | Refund only, on an existing capture |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Refunds send a `PayPal-Request-Id`, so re-running the same refund doesn't refund twice.
 
-## Deploy on Vercel
+## Code
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
+- `scripts/paypal-week1.ts`: the Week 1 end-to-end script.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Timeline
+
+- **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype on 15–20 photos.
+- **Week 2 (Oct 26–Nov 1):** claim page, rules engine, one-round negotiation, real refunds.
+- **Week 3 (Nov 2–8):** AG Grid dashboard, fraud checks, deploy with seeded demo orders.
+- **Nov 9–12:** README, video, submit by Nov 11.
