@@ -1,26 +1,22 @@
-import { createHash } from "node:crypto";
-import sharp from "sharp";
+// Photo fingerprints that work the same on Node and Workers. Decoding and resizing live in
+// images-node.ts (sharp) and images-cf.ts (Cloudflare Images); photos.ts picks one.
 
-// Phone photos are often 4-8MB; shrink to keep grading requests small and fast.
-export function toGradingJpeg(input: Buffer | string): Promise<Buffer> {
-  return sharp(input)
-    .rotate()
-    .resize({ width: 1536, height: 1536, fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 85 })
-    .toBuffer();
-}
+import { createHash } from "node:crypto";
+
+/** Longest side of the copy we grade and keep. Phone photos are often 4-8 MB. */
+export const GRADING_MAX_SIDE = 1536;
 
 /** Exact-match fingerprint of the uploaded bytes. */
-export function sha256(buf: Buffer): string {
+export function sha256(buf: Uint8Array): string {
   return createHash("sha256").update(buf).digest("hex");
 }
 
 /**
- * 64-bit difference hash as 16 hex chars. Survives resizing, recompression and small edits,
- * so the same photo re-saved or screenshotted still matches.
+ * 64-bit difference hash as 16 hex chars, from a 9×8 grayscale image (row-major, 72 values).
+ * Survives resizing, recompression and small edits, so the same photo re-saved or screenshotted still matches.
  */
-export async function dHash(input: Buffer): Promise<string> {
-  const px = await sharp(input).rotate().grayscale().resize(9, 8, { fit: "fill" }).raw().toBuffer();
+export function dHashFromGray(px: ArrayLike<number>): string {
+  if (px.length !== 72) throw new Error(`dHash needs 9×8 pixels, got ${px.length}`);
   let hex = "";
   for (let i = 0; i < 64; i += 4) {
     let nibble = 0;
@@ -45,3 +41,8 @@ export function hashDistance(a: string, b: string): number {
 
 /** At or under this many differing bits, two photos count as the same picture. */
 export const NEAR_DUPLICATE_BITS = 6;
+
+export interface PreparedPhoto {
+  jpeg: Uint8Array;
+  dhash: string | null;
+}

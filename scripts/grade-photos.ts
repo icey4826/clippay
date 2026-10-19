@@ -11,7 +11,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { SEVERITIES, graderFromEnv, type GradeResult, type ImageInput, type Severity } from "../src/lib/grading";
-import { toGradingJpeg } from "../src/lib/images";
+import { toGradingJpeg } from "../src/lib/images-node";
 
 const { values: args } = parseArgs({
   options: {

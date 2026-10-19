@@ -48,3 +48,8 @@ next-env.d.ts
 
 # local claim store and buyer photos
 /data/
+
+# Cloudflare build output
+/.open-next/
+/.wrangler/
+.dev.vars*

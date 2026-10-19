@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clippay",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "routes": [{ "pattern": "clippay.productivityappsforwindows.com", "custom_domain": true }],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "clippay", "database_id": "f2662323-a223-4fa5-9c3a-d3b77a9ec4ac", "migrations_dir": "migrations" }
+  ],
+  "images": { "binding": "IMAGES" },
+  // Non-secret settings. Secrets (PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, GEMINI_API_KEY, MERCHANT_PASSWORD)
+  // are set with `wrangler secret put`.
+  "vars": {
+    "APP_URL": "https://clippay.productivityappsforwindows.com",
+    "PAYPAL_ENV": "sandbox",
+    "GEMINI_MODEL": "gemini-3.5-flash",
+    "GEMINI_THINKING_LEVEL": "low"
+  }
+}

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import sharp from "sharp";
-import { dHash, hashDistance, NEAR_DUPLICATE_BITS } from "./images";
+import { pngToGray } from "./images-cf";
+import { dHashFromGray, hashDistance, NEAR_DUPLICATE_BITS } from "./images";
+import { dHash } from "./images-node";
 
 // Synthetic "photos": a lit scene with a few shapes, rendered from SVG.
 function scene(shapes: string, w = 800, h = 600) {
@@ -42,4 +44,27 @@ describe("hashDistance", () => {
     assert.equal(hashDistance("0000000000000000", "000000000000000f"), 4);
     assert.equal(hashDistance("ffffffffffffffff", "0000000000000000"), 64);
   });
+});
+
+describe("pngToGray (Workers dHash path)", () => {
+  for (const [name, opts] of [
+    ["RGB", {}],
+    ["RGBA", { ensureAlpha: true }],
+    ["palette", { palette: true }],
+  ] as const) {
+    it(`decodes a 9×8 ${name} PNG exactly`, async () => {
+      const small = sharp(await scene(MUG)).resize(9, 8, { fit: "fill" });
+      const png = await ("ensureAlpha" in opts ? small.ensureAlpha() : small).png({ palette: "palette" in opts }).toBuffer();
+      const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      assert.equal(info.channels, 3);
+      const expected = Array.from({ length: 72 }, (_, i) =>
+        Math.round(0.299 * data[i * 3] + 0.587 * data[i * 3 + 1] + 0.114 * data[i * 3 + 2]),
+      );
+      const ours = await pngToGray(png);
+      assert.deepEqual(Array.from(ours), expected);
+      // libvips weighs channels a little differently; the hash should barely notice.
+      const vipsGray = await sharp(png).grayscale().raw().toBuffer();
+      assert.ok(hashDistance(dHashFromGray(ours), dHashFromGray(vipsGray)) <= 3);
+    });
+  }
 });

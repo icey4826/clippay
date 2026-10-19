@@ -2,15 +2,13 @@
 // Route handlers stay thin; everything that touches money goes through here.
 
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { findProduct } from "./catalog";
 import { graderFromEnv, type Grade, type ImageInput } from "./grading";
-import { dHash, hashDistance, NEAR_DUPLICATE_BITS, sha256, toGradingJpeg } from "./images";
+import { hashDistance, NEAR_DUPLICATE_BITS, sha256, type PreparedPhoto } from "./images";
 import { approveLink, centsToMoney, firstCapture, moneyToCents, payPalFromEnv, PayPalError } from "./paypal";
+import { preparePhoto, savePhoto } from "./photos";
 import { decideOffer, evaluateCounter, DEFAULT_POLICY, type Decision } from "./rules";
 import {
-  DATA_DIR,
   getClaimForOrder,
   getOrderByToken,
   read,
@@ -153,7 +151,7 @@ export async function openClaim(token: string): Promise<{ order: StoredOrder; cl
 }
 
 export interface PhotoUpload {
-  bytes: Buffer;
+  bytes: Uint8Array;
   type: string;
 }
 
@@ -177,16 +175,16 @@ export async function submitClaim(token: string, description: string, uploads: P
   const desc = description.trim().slice(0, 1000);
 
   // Grade outside the lock: it takes seconds.
-  let jpegs: Buffer[];
-  let dhashes: string[];
+  let prepared: PreparedPhoto[];
   try {
-    jpegs = await Promise.all(uploads.map((u) => toGradingJpeg(u.bytes)));
-    dhashes = await Promise.all(jpegs.map((j) => dHash(j)));
-  } catch {
+    prepared = await Promise.all(uploads.map((u) => preparePhoto(u.bytes)));
+  } catch (err) {
+    console.error(`Photo prep failed for claim ${claim.id}:`, err instanceof Error ? err.message : err);
     throw new ClaimError("One of the photos couldn't be read. Try a different photo.");
   }
+  const dhashes = prepared.map((p) => p.dhash).filter((h): h is string => h != null);
   const hashes = uploads.map((u) => sha256(u.bytes));
-  const images: ImageInput[] = jpegs.map((j) => ({ data: j.toString("base64"), mimeType: "image/jpeg" }));
+  const images: ImageInput[] = prepared.map((p) => ({ data: Buffer.from(p.jpeg).toString("base64"), mimeType: "image/jpeg" }));
 
   let result;
   try {
@@ -200,12 +198,11 @@ export async function submitClaim(token: string, description: string, uploads: P
     throw new ClaimError("We couldn't check your photos right now. Please try again in a minute.", 503);
   }
 
-  await mkdir(join(DATA_DIR, "photos"), { recursive: true });
   const photos = await Promise.all(
-    jpegs.map(async (j, i) => {
-      const rel = join("photos", `${claim.id}-${i + 1}.jpg`);
-      await writeFile(join(DATA_DIR, rel), j);
-      return { path: rel, sha256: hashes[i], dhash: dhashes[i] };
+    prepared.map(async (p, i) => {
+      const key = `photos/${claim.id}-${i + 1}.jpg`;
+      await savePhoto(key, p.jpeg);
+      return { path: key, sha256: hashes[i], ...(p.dhash ? { dhash: p.dhash } : {}) };
     }),
   );
 

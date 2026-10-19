@@ -130,6 +130,25 @@ export default function ClaimFlow({ token, initial }: { token: string; initial: 
 
 // ---------- Step 1: photo ----------
 
+/** Phone photos can be 8 MB; send a 2048px JPEG instead. The server resizes again, so failures just send the original. */
+async function shrink(file: File): Promise<File> {
+  const MAX_SIDE = 2048;
+  if (file.size < 1.5 * 1024 * 1024) return file;
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
+
 function PhotoStep({ view, busy, onSubmit }: { view: BuyerClaimView; busy: boolean; onSubmit: (fd: FormData) => void }) {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -150,11 +169,11 @@ function PhotoStep({ view, busy, onSubmit }: { view: BuyerClaimView; busy: boole
     setFiles((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const fd = new FormData();
     fd.set("description", description);
-    for (const f of files) fd.append("photos", f);
+    for (const f of await Promise.all(files.map(shrink))) fd.append("photos", f);
     onSubmit(fd);
   }
 

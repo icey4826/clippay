@@ -118,6 +118,27 @@ Demo orders are marked `demo` and their refunds are simulated; they never call P
 
 Set `MERCHANT_PASSWORD` in `.env` to put `/merchant` and `/api/merchant/*` behind basic auth (any username). Leave it empty for local development.
 
+## Deploy (Cloudflare Workers)
+
+Live at https://clippay.productivityappsforwindows.com (PayPal sandbox, no real money).
+
+The app runs on Workers through [OpenNext](https://opennext.js.org/cloudflare). The same code picks its backends at runtime:
+
+| | Local (`npm run dev`, scripts) | Workers |
+|---|---|---|
+| Orders and claims | `data/clippay.json` | D1 (`migrations/`), compare-and-swap on `meta.version` |
+| Photo resize + dHash | sharp | Cloudflare Images binding (+ a tiny PNG decoder for the 9×8 hash) |
+| Photo storage | `data/photos/` | D1 `photos` table |
+
+```bash
+npm run db:migrate                        # apply migrations to the remote D1
+npx wrangler secret bulk < secrets.json   # PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, GEMINI_API_KEY, MERCHANT_PASSWORD
+npm run cf:deploy                         # build with OpenNext and deploy
+npm run seed:demo && npm run db:seed-demo # replace the demo claims in D1
+```
+
+Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`) are in `wrangler.jsonc`.
+
 ## Code
 
 - `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
@@ -125,7 +146,8 @@ Set `MERCHANT_PASSWORD` in `.env` to put `/merchant` and `/api/merchant/*` behin
 - `src/lib/grading.ts`: Gemini damage grader (schema, prompt, retries, code check).
 - `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
 - `src/lib/claims.ts`: claim workflow (checkout, code, grading, decision, counter, refund) and the buyer-safe view.
-- `src/lib/store.ts`: JSON-file store for orders and claims (D1 in Week 3).
+- `src/lib/store.ts`: store for orders and claims (JSON file locally, D1 on Workers).
+- `src/lib/photos.ts`, `images-node.ts`, `images-cf.ts`: photo prep and storage for each runtime.
 - `src/lib/merchant.ts`: dashboard rows and headline numbers.
 - `src/lib/images.ts`: photo resize, SHA-256 and dHash. Tests in `images.test.ts`.
 - `src/app/`: shop, receipt, claim and merchant pages; API routes under `src/app/api/`.
@@ -138,5 +160,5 @@ Set `MERCHANT_PASSWORD` in `.env` to put `/merchant` and `/api/merchant/*` behin
 
 - **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
 - **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests); claim page wired to grading and refunds ✅ (verified Oct 19: real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
-- **Week 3 (Nov 2–8):** AG Grid dashboard with approve / decline / retry ✅; near-duplicate photo check (dHash) ✅; merchant basic auth ✅; seeded demo claims ✅; UI redesign ✅. Still to do: deploy to Cloudflare (needs D1 instead of the JSON store and a Workers-friendly replacement for sharp).
+- **Week 3 (Nov 2–8):** AG Grid dashboard with approve / decline / retry ✅; near-duplicate photo check (dHash) ✅; merchant basic auth ✅; seeded demo claims ✅; UI redesign ✅. Deployed to Cloudflare Workers with D1 and the Images binding ✅ (verified Oct 19: live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
 - **Nov 9–12:** README, video, submit by Nov 11.
