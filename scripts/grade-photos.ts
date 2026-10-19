@@ -10,8 +10,8 @@ import "dotenv/config";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { parseArgs } from "node:util";
-import sharp from "sharp";
 import { SEVERITIES, graderFromEnv, type GradeResult, type ImageInput, type Severity } from "../src/lib/grading";
+import { toGradingJpeg } from "../src/lib/images";
 
 const { values: args } = parseArgs({
   options: {
@@ -32,14 +32,8 @@ interface ManifestEntry {
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Phone photos are often 4-8MB; shrink to keep requests small and fast.
 async function loadImage(path: string): Promise<ImageInput> {
-  const buf = await sharp(path)
-    .rotate()
-    .resize({ width: 1536, height: 1536, fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 85 })
-    .toBuffer();
-  return { data: buf.toString("base64"), mimeType: "image/jpeg" };
+  return { data: (await toGradingJpeg(path)).toString("base64"), mimeType: "image/jpeg" };
 }
 
 function severityDistance(a: Severity, b: Severity) {

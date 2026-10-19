@@ -82,17 +82,38 @@ model calls, and all money is integer cents, so the AI never decides an amount.
 npm test
 ```
 
+## Week 2: claim flow
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000:
+
+1. **Shop:** pick an item and pay with the sandbox buyer account.
+2. **Receipt** (`/orders/<token>`): "Report damage" opens the claim link.
+3. **Claim** (`/claim/<token>`): shows a 4-character code (valid 30 minutes). The buyer writes it on paper, photographs it next to the damage (up to 3 photos) and sends them. Gemini grades the photos and the rules engine decides.
+4. **Offer:** accept to get the refund now, or counter once. A counter within the headroom is refunded straight away; a higher one goes to the merchant.
+5. **Refund:** a partial refund on the PayPal capture, with request id `refund-<claimId>`, so retries never pay twice.
+
+The buyer never sees fraud signals. A claim that goes to review just says a person will look at it.
+
+Orders, claims and resized photos are stored in `data/` (gitignored). Duplicate photos are caught by exact SHA-256 match for now.
+
 ## Code
 
 - `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
 - `scripts/paypal-week1.ts`: the Week 1 end-to-end script.
 - `src/lib/grading.ts`: Gemini damage grader (schema, prompt, retries, code check).
 - `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
+- `src/lib/claims.ts`: claim workflow (checkout, code, grading, decision, counter, refund) and the buyer-safe view.
+- `src/lib/store.ts`: JSON-file store for orders and claims (D1 in Week 3).
+- `src/app/`: shop, receipt and claim pages; API routes under `src/app/api/`.
 - `src/lib/rules.ts`: rules engine (offer, review or ineligible; one-round counter). Tests in `rules.test.ts`.
 
 ## Timeline
 
 - **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
-- **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests, Oct 19); claim page and real refunds next.
+- **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests); claim page wired to grading and refunds ✅ (verified Oct 19: real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
 - **Week 3 (Nov 2–8):** AG Grid dashboard, fraud checks, deploy with seeded demo orders.
 - **Nov 9–12:** README, video, submit by Nov 11.

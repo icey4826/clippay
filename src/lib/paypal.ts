@@ -43,6 +43,16 @@ export function toMoney(amount: number, currency = "USD"): Money {
   return { currency_code: currency, value: amount.toFixed(2) };
 }
 
+/** Integer cents -> PayPal money. */
+export function centsToMoney(cents: number, currency = "USD"): Money {
+  return { currency_code: currency, value: (cents / 100).toFixed(2) };
+}
+
+/** PayPal money -> integer cents. */
+export function moneyToCents(money: Money): number {
+  return Math.round(Number(money.value) * 100);
+}
+
 export class PayPalClient {
   private baseUrl: string;
   private token: { value: string; expiresAt: number } | null = null;
@@ -203,6 +213,7 @@ export interface PayPalOrder {
   id: string;
   status: "CREATED" | "SAVED" | "APPROVED" | "VOIDED" | "COMPLETED" | "PAYER_ACTION_REQUIRED";
   links?: PayPalLink[];
+  payer?: { payer_id?: string; email_address?: string };
   purchase_units?: {
     reference_id?: string;
     amount?: Money;

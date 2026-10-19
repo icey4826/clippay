@@ -45,3 +45,6 @@ next-env.d.ts
 /results/
 /samples/*
 !/samples/manifest.example.json
+
+# local claim store and buyer photos
+/data/
