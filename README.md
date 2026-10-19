@@ -98,7 +98,25 @@ Open http://localhost:3000:
 
 The buyer never sees fraud signals. A claim that goes to review just says a person will look at it.
 
-Orders, claims and resized photos are stored in `data/` (gitignored). Duplicate photos are caught by exact SHA-256 match for now.
+Orders, claims and resized photos are stored in `data/` (gitignored). Duplicate photos are caught by exact SHA-256 match and by a 64-bit difference hash (dHash): a photo within 6 bits of an earlier claim's photo, for example the same picture resized or recompressed, goes to review.
+
+## Week 3: merchant dashboard
+
+```bash
+npm run seed:demo            # 10 demo claims, decided by the real rules engine
+npm run seed:demo -- --reset # remove demo data only
+```
+
+Open http://localhost:3000/merchant:
+
+- **Headline numbers:** total refunded, savings against full returns (price plus return shipping), share settled automatically, median time from photo to refund, and claims waiting for review.
+- **Claims grid** (AG Grid): filter by All / Needs action / Refunded / Other; click a row for the detail panel.
+- **Detail panel:** photos, the reasons a claim went to review, the AI grade, the buyer's description and how it was settled.
+- **Actions:** approve a review claim for any amount up to what's left on the capture (with an optional note), decline it, or retry a failed or stuck refund. All refunds keep the `refund-<claimId>` request id.
+
+Demo orders are marked `demo` and their refunds are simulated; they never call PayPal.
+
+Set `MERCHANT_PASSWORD` in `.env` to put `/merchant` and `/api/merchant/*` behind basic auth (any username). Leave it empty for local development.
 
 ## Code
 
@@ -108,12 +126,17 @@ Orders, claims and resized photos are stored in `data/` (gitignored). Duplicate 
 - `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
 - `src/lib/claims.ts`: claim workflow (checkout, code, grading, decision, counter, refund) and the buyer-safe view.
 - `src/lib/store.ts`: JSON-file store for orders and claims (D1 in Week 3).
-- `src/app/`: shop, receipt and claim pages; API routes under `src/app/api/`.
+- `src/lib/merchant.ts`: dashboard rows and headline numbers.
+- `src/lib/images.ts`: photo resize, SHA-256 and dHash. Tests in `images.test.ts`.
+- `src/app/`: shop, receipt, claim and merchant pages; API routes under `src/app/api/`.
+- `src/components/`: shared UI (buttons, cards, badges, steps) and product illustrations.
+- `src/middleware.ts`: basic auth for the merchant pages.
+- `scripts/seed-demo.ts`: demo claims for the dashboard.
 - `src/lib/rules.ts`: rules engine (offer, review or ineligible; one-round counter). Tests in `rules.test.ts`.
 
 ## Timeline
 
 - **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
 - **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests); claim page wired to grading and refunds ✅ (verified Oct 19: real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
-- **Week 3 (Nov 2–8):** AG Grid dashboard, fraud checks, deploy with seeded demo orders.
+- **Week 3 (Nov 2–8):** AG Grid dashboard with approve / decline / retry ✅; near-duplicate photo check (dHash) ✅; merchant basic auth ✅; seeded demo claims ✅; UI redesign ✅. Still to do: deploy to Cloudflare (needs D1 instead of the JSON store and a Workers-friendly replacement for sharp).
 - **Nov 9–12:** README, video, submit by Nov 11.

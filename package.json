@@ -10,10 +10,14 @@
     "paypal:week1": "tsx scripts/paypal-week1.ts",
     "typecheck": "tsc --noEmit",
     "grade": "tsx scripts/grade-photos.ts",
-    "test": "tsx --test 'src/**/*.test.ts'"
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
+    "ag-grid-community": "^36.2.0",
+    "ag-grid-react": "^36.2.0",
+    "lucide-react": "^1.59.0",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",

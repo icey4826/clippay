@@ -18,6 +18,8 @@ export interface StoredOrder {
   payerId: string | null;
   payerEmail: string | null;
   refundedCents: number;
+  /** Seeded demo order: refunds are simulated, PayPal is never called. */
+  demo?: boolean;
 }
 
 export type ClaimStatus =
@@ -25,6 +27,7 @@ export type ClaimStatus =
   | "offered" // automatic offer shown to the buyer
   | "review" // waiting for the merchant
   | "ineligible"
+  | "denied" // merchant declined after review
   | "refunding" // refund call in flight; blocks a second accept
   | "refunded"
   | "refund_failed";
@@ -32,6 +35,7 @@ export type ClaimStatus =
 export interface StoredPhoto {
   path: string; // relative to data/
   sha256: string;
+  dhash?: string; // perceptual hash; missing on claims filed before it existed
 }
 
 export interface StoredClaim {
@@ -52,11 +56,16 @@ export interface StoredClaim {
   reviewNote: string | null; // why it went to review after the offer (e.g. counter too high)
   refund: { id: string; status: string; amountCents: number } | null;
   refundError: string | null;
+  /** Who settled it: the automatic offer, an auto-accepted counter, or the merchant after review. */
+  resolution: "auto_offer" | "auto_counter" | "merchant" | null;
+  merchantNote: string | null;
+  submittedAt: string | null;
+  settledAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-interface Db {
+export interface Db {
   orders: Record<string, StoredOrder>;
   claims: Record<string, StoredClaim>;
 }
