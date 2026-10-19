@@ -68,16 +68,31 @@ Newer Flash models also worked but took 30–120s on the free tier under load (O
 
 Free-tier note: Google may use free-tier inputs to improve its products. Use test photos only, and a paid key for real buyer photos.
 
+## Week 2: rules engine
+
+`src/lib/rules.ts` turns a grade plus the merchant's policy into a decision. It has no I/O and no
+model calls, and all money is integer cents, so the AI never decides an amount.
+
+- **Offer:** refund = severity band (none 0%, cosmetic 10%, minor 20%, moderate 35%, severe 60%, unusable 80% of price).
+- **Review:** any trust signal goes to the merchant instead of being auto-paid or auto-rejected. These are an unusable or fake photo, the wrong item, a missing or wrong code, a duplicate image, too many claims, low confidence, an amount above the 60% ceiling (or above what's left after earlier refunds), or an amount above the $100 auto-approve limit.
+- **Ineligible:** the order is older than 30 days (never more than PayPal's 180), it's already fully refunded, or a trustworthy photo shows no damage.
+- **Counter:** one per claim. Up to the band + 10 points (capped by the ceiling and auto-approve limit) is accepted automatically; anything higher goes to the merchant.
+
+```bash
+npm test
+```
+
 ## Code
 
 - `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
 - `scripts/paypal-week1.ts`: the Week 1 end-to-end script.
 - `src/lib/grading.ts`: Gemini damage grader (schema, prompt, retries, code check).
 - `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
+- `src/lib/rules.ts`: rules engine (offer, review or ineligible; one-round counter). Tests in `rules.test.ts`.
 
 ## Timeline
 
 - **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
-- **Week 2 (Oct 26–Nov 1):** claim page, rules engine, one-round negotiation, real refunds.
+- **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests, Oct 19); claim page and real refunds next.
 - **Week 3 (Nov 2–8):** AG Grid dashboard, fraud checks, deploy with seeded demo orders.
 - **Nov 9–12:** README, video, submit by Nov 11.

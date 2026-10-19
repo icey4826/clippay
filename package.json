@@ -9,7 +9,8 @@
     "lint": "eslint",
     "paypal:week1": "tsx scripts/paypal-week1.ts",
     "typecheck": "tsc --noEmit",
-    "grade": "tsx scripts/grade-photos.ts"
+    "grade": "tsx scripts/grade-photos.ts",
+    "test": "tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
