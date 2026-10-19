@@ -39,6 +39,10 @@
       "vo": "Merchants see every claim in one dashboard: what they refunded, what they saved compared with full returns, and a short queue of claims that need a human, like a missing code or a reused photo."
     },
     {
+      "id": "live",
+      "vo": "Now the real thing, live in the PayPal sandbox. We buy the mug set and pay with PayPal. The claim gives us a code, and we photograph it next to the damage. This crack is too severe to settle automatically, so the rules engine caps the refund and sends it to the merchant. One click, and the partial refund shows up in PayPal. That's the real app, end to end."
+    },
+    {
       "id": "close",
       "vo": "It's live today on Cloudflare, with PayPal payments and Gemini grading. ClipPay. Keep the item. Keep the customer."
     }

@@ -10,11 +10,13 @@ export const HEIGHT = 1080;
 
 /** Seconds of silence before each line starts, and after it ends. */
 const LEAD = 0.45;
+/** The live segment opens on the footage before the narrator comes in. */
+const LEADS: Record<string, number> = { live: 2 };
 const TAIL = 0.95;
 /** Extra hold at the end of some scenes (the end card stays up after the last word). */
-const HOLD: Record<string, number> = { close: 3.2 };
+const HOLD: Record<string, number> = { live: 4, close: 3.2 };
 
-export type SceneId = "hook" | "cost" | "reveal" | "proof" | "grade" | "rules" | "offer" | "refund" | "merchant" | "close";
+export type SceneId = "hook" | "cost" | "reveal" | "proof" | "grade" | "rules" | "offer" | "refund" | "merchant" | "live" | "close";
 
 export type Scene = {
   id: SceneId;
@@ -33,8 +35,9 @@ export const SCENES: Scene[] = (() => {
   let from = 0;
   return script.scenes.map((s) => {
     const voiceSeconds = voiceTiming[s.id];
-    const durationInFrames = Math.ceil((LEAD + voiceSeconds + TAIL + (HOLD[s.id] ?? 0)) * FPS);
-    const scene: Scene = { id: s.id as SceneId, vo: s.vo, voiceSeconds, from, durationInFrames, voiceFrom: Math.round(LEAD * FPS) };
+    const lead = LEADS[s.id] ?? LEAD;
+    const durationInFrames = Math.ceil((lead + voiceSeconds + TAIL + (HOLD[s.id] ?? 0)) * FPS);
+    const scene: Scene = { id: s.id as SceneId, vo: s.vo, voiceSeconds, from, durationInFrames, voiceFrom: Math.round(lead * FPS) };
     from += durationInFrames;
     return scene;
   });

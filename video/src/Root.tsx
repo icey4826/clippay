@@ -3,6 +3,7 @@ import "@fontsource-variable/geist-mono";
 import { useEffect, useState, type ComponentType } from "react";
 import { AbsoluteFill, Audio, Composition, Sequence, continueRender, delayRender, interpolate, staticFile } from "remotion";
 import { Cost, Hook, Reveal } from "./scenes/Intro";
+import { Live } from "./scenes/Live";
 import { Close, Merchant, Offer, Refund } from "./scenes/Payout";
 import { Grade, Proof, Rules } from "./scenes/Product";
 import { FPS, HEIGHT, SCENES, TOTAL_FRAMES, WIDTH, captions, cue, type SceneId } from "./timeline";
@@ -18,6 +19,7 @@ const VIEWS: Record<SceneId, ComponentType<{ duration: number }>> = {
   offer: Offer,
   refund: Refund,
   merchant: Merchant,
+  live: Live,
   close: Close,
 };
 

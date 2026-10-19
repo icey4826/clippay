@@ -85,7 +85,7 @@ async function voice(only?: string) {
   for (const s of script.scenes) {
     if (only ? s.id !== only : timing[s.id] != null) continue;
     const res = await withRateLimit(() => ai.models.generateContent({
-      model: script.ttsModel,
+      model: process.env.TTS_MODEL ?? script.ttsModel,
       // Plain text only: the 3.x TTS models read any style prefix aloud and reject system instructions.
       contents: s.vo,
       config: {
