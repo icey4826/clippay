@@ -5,7 +5,7 @@ import { formatCents, PRODUCTS } from "@/lib/catalog";
 
 const HOW = [
   { icon: Camera, title: "Snap the damage", body: "Photo with a one-time code on paper, so it's taken now, not found online." },
-  { icon: ScanSearch, title: "AI grades it", body: "Gemini describes the defect and its severity as strict JSON." },
+  { icon: ScanSearch, title: "AI grades it", body: "A vision model describes the defect and its severity as strict JSON." },
   { icon: Scale, title: "Rules set the price", body: "The merchant's policy, not the AI, turns the grade into an offer." },
   { icon: Wallet, title: "PayPal pays", body: "A partial refund lands in seconds. No return label, no warehouse trip." },
 ];

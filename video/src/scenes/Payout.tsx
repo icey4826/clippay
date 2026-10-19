@@ -263,8 +263,8 @@ export function Close() {
   const chips: { icon: string; text: string; at: number }[] = [
     { icon: "bolt", text: "Cloudflare Workers + D1", at: cue("close", "on Cloudflare") },
     { icon: "refund", text: "PayPal Orders & Payments", at: cue("close", "PayPal payments") },
-    { icon: "spark", text: "Gemini 3.5 Flash", at: cue("close", "Gemini grading") },
-    { icon: "box", text: "Next.js", at: cue("close", "Gemini grading", 0.5) },
+    { icon: "spark", text: "AI photo grading", at: cue("close", "AI grading") },
+    { icon: "box", text: "Next.js", at: cue("close", "AI grading", 0.5) },
   ];
   const mark = useIn(cEnd - 2, { damping: 14, stiffness: 120 });
   const word = useRamp(cEnd + 2, cEnd + 20, easeOut);
@@ -312,7 +312,7 @@ export function Close() {
           </div>
           <div style={{ ...urlIn, marginTop: 90, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
             <div style={{ fontFamily: MONO, fontSize: 34, color: C.ink }}>{APP_HOST}</div>
-            <div style={{ fontFamily: SANS, fontSize: 24, color: C.faint }}>PayPal sandbox · Gemini · Cloudflare Workers</div>
+            <div style={{ fontFamily: SANS, fontSize: 24, color: C.faint }}>PayPal sandbox · AI grading · Cloudflare Workers</div>
           </div>
         </AbsoluteFill>
       )}

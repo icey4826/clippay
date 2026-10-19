@@ -46,7 +46,7 @@ export default function RootLayout({
           </header>
           <main className="flex-1 pb-20">{children}</main>
           <footer className="border-t border-line py-6 text-xs text-faint">
-            ClipPay · PayPal AI hackathon demo · Gemini grades the photo, a rules engine sets the price, PayPal pays it.
+            ClipPay · PayPal AI hackathon demo · AI grades the photo, a rules engine sets the price, PayPal pays it.
           </footer>
         </div>
       </body>

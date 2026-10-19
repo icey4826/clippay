@@ -20,7 +20,7 @@
     },
     {
       "id": "grade",
-      "vo": "Gemini looks at the photo: what's damaged, where, how badly, whether it's a real photo, and whether the code matches."
+      "vo": "The AI looks at the photo: what's damaged, where, how badly, whether it's a real photo, and whether the code matches."
     },
     {
       "id": "rules",
@@ -44,7 +44,7 @@
     },
     {
       "id": "close",
-      "vo": "It's live today on Cloudflare, with PayPal payments and Gemini grading. ClipPay. Keep the item. Keep the customer."
+      "vo": "It's live today on Cloudflare, with PayPal payments and AI grading. ClipPay. Keep the item. Keep the customer."
     }
   ]
 }

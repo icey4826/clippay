@@ -1,53 +1,22 @@
 // Scene: the real app, screen-recorded end to end in the PayPal sandbox, fitted to the narration.
 
 import { AbsoluteFill, Freeze, Img, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
-import { LIVE_ASPECT, LIVE_CLIPS, LIVE_PHOTO, type LiveClip, type LiveStep } from "../live";
+import { LIVE_ASPECT, LIVE_CLICKS, LIVE_PHOTO, LIVE_RINGS, liveFrame, liveLayout, toBox, type LiveClip } from "../live";
 import { FPS, cue } from "../timeline";
-import { C, Card, Icon, Pill, SANS, ease, useIn, useRise } from "../ui";
+import { C, Card, Cursor, Icon, Pill, Ring, SANS, ease, useIn, useRise } from "../ui";
 import { SideColumn } from "./Product";
-
-const STEPS: { id: LiveStep; label: string; icon: string; phrase: string }[] = [
-  { id: "pay", label: "Pay with PayPal", icon: "tag", phrase: "We buy" },
-  { id: "code", label: "Photo with the code", icon: "camera", phrase: "The claim gives" },
-  { id: "review", label: "Too severe: merchant approves", icon: "user", phrase: "This crack" },
-  { id: "refund", label: "Refund in PayPal", icon: "refund", phrase: "One click" },
-];
 
 const BOX = { left: 640, width: 1180, height: Math.round(1180 / LIVE_ASPECT) };
 BOX.height = Math.min(BOX.height, 820);
 const BOX_TOP = Math.round((1080 - BOX.height) / 2) - 10;
 
-/** Local frame range each step holds the screen for. The first starts with the scene; the last runs to its end. */
-function windows(duration: number) {
-  return STEPS.map((s, i) => ({
-    ...s,
-    start: i === 0 ? 0 : cue("live", s.phrase, -0.25),
-    end: i + 1 < STEPS.length ? cue("live", STEPS[i + 1].phrase, -0.25) : duration,
-  }));
-}
-
-type Placed = { clip: LiveClip; from: number; frames: number; rate: number };
-
-/** Lays a step's clips into its window: sped up to fit, never slowed below 0.8×, holding the last frame if short. */
-function place(step: LiveStep, start: number, end: number): { clips: Placed[]; hold: number; rate: number } {
-  const clips = LIVE_CLIPS.filter((c) => c.step === step);
-  const window = end - start;
-  const source = clips.reduce((n, c) => n + (c.to - c.from) * FPS, 0);
-  if (!clips.length || window <= 0) return { clips: [], hold: 0, rate: 1 };
-  const rate = Math.max(0.8, source / window);
-  let at = start;
-  const placed = clips.map((clip) => {
-    const frames = Math.max(1, Math.floor(((clip.to - clip.from) * FPS) / rate));
-    const p = { clip, from: at, frames, rate };
-    at += frames;
-    return p;
-  });
-  return { clips: placed, hold: Math.max(0, end - at), rate };
-}
+/** Frames the cursor takes to glide onto a button before clicking, and stays after. */
+const GLIDE = 16;
+const LINGER = 14;
 
 function Footage({ clip, rate }: { clip: LiveClip; rate: number }) {
   const frame = useCurrentFrame();
-  const z = clip.zoom ? interpolate(frame, [0, 14], [1, clip.zoom.z], { extrapolateRight: "clamp", easing: ease }) : 1;
+  const z = !clip.zoom ? 1 : clip.zoom.instant ? clip.zoom.z : interpolate(frame, [0, 14], [1, clip.zoom.z], { extrapolateRight: "clamp", easing: ease });
   const ox = (clip.zoom?.x ?? 0.5) * 100;
   const oy = (clip.zoom?.y ?? 0.5) * 100;
   return (
@@ -65,8 +34,7 @@ function Footage({ clip, rate }: { clip: LiveClip; rate: number }) {
 
 export function Live({ duration }: { duration: number }) {
   const frame = useCurrentFrame();
-  const steps = windows(duration);
-  const layout = steps.map((s) => ({ ...s, ...place(s.id, s.start, s.end) }));
+  const layout = liveLayout(duration);
   const current = layout.find((s) => frame >= s.start && frame < s.end) ?? layout[layout.length - 1];
   const boxIn = useIn(3, { damping: 20, stiffness: 90 });
   // The photo gets its own moment between "photograph it" and the review.
@@ -117,6 +85,7 @@ export function Live({ duration }: { duration: number }) {
             </Sequence>
           );
         })}
+        <Marks layout={layout} />
       </div>
       <div style={{ position: "absolute", left: BOX.left + 22, top: BOX_TOP - 22, display: "flex", gap: 12, opacity: boxIn }}>
         <Pill tone="bad" size={22} style={{ background: C.bad, color: "#fff", boxShadow: "0 8px 20px -8px rgba(200,40,40,0.6)" }}>
@@ -153,6 +122,45 @@ export function Live({ duration }: { duration: number }) {
         </div>
       )}
     </AbsoluteFill>
+  );
+}
+
+/** Clicks (a cursor gliding onto the button) and highlight rings, placed over the footage at their source moments. */
+function Marks({ layout }: { layout: ReturnType<typeof liveLayout> }) {
+  return (
+    <>
+      {LIVE_CLICKS.map((m) => {
+        const f = liveFrame(layout, m.file, m.t);
+        if (!f) return null;
+        const p = toBox(f.clip, BOX, m.x, m.y);
+        return (
+          <Sequence key={`click-${m.t}`} from={f.at - GLIDE} durationInFrames={GLIDE + LINGER + 8} layout="none">
+            <FadingCursor x={p.x} y={p.y} />
+          </Sequence>
+        );
+      })}
+      {LIVE_RINGS.map((m) => {
+        const f = liveFrame(layout, m.file, m.t);
+        if (!f) return null;
+        const end = m.until !== undefined ? (liveFrame(layout, m.file, m.until)?.at ?? f.stepEnd) : f.stepEnd;
+        const r = toBox(f.clip, BOX, m.x, m.y, m.w, m.h);
+        return (
+          <Sequence key={`ring-${m.t}`} from={f.at} durationInFrames={Math.max(1, end - f.at)} layout="none">
+            <Ring at={0} x={r.x} y={r.y} w={r.w} h={r.h} label={m.label} color={m.tone === "warn" ? C.warn : C.good} labelSize={24} labelAlign={m.align} />
+          </Sequence>
+        );
+      })}
+    </>
+  );
+}
+
+function FadingCursor({ x, y }: { x: number; y: number }) {
+  const frame = useCurrentFrame();
+  const out = interpolate(frame, [GLIDE + LINGER, GLIDE + LINGER + 8], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: out }}>
+      <Cursor keys={[{ at: 0, x: x + 150, y: y + 110 }, { at: GLIDE, x, y, click: true }]} />
+    </div>
   );
 }
 

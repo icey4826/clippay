@@ -6,6 +6,8 @@ import { Cost, Hook, Reveal } from "./scenes/Intro";
 import { Live } from "./scenes/Live";
 import { Close, Merchant, Offer, Refund } from "./scenes/Payout";
 import { Grade, Proof, Rules } from "./scenes/Product";
+import { SFX } from "./sfx";
+import { Thumbnail } from "./Thumbnail";
 import { FPS, HEIGHT, SCENES, TOTAL_FRAMES, WIDTH, captions, cue, type SceneId } from "./timeline";
 import { Backdrop, Captions, SceneShell } from "./ui";
 
@@ -60,6 +62,11 @@ export function ClipPayDemo({ showCaptions }: { showCaptions: boolean }) {
     <AbsoluteFill style={{ background: "#f6f4ef" }}>
       <Backdrop />
       <Audio src={staticFile("music.wav")} volume={musicVolume} />
+      {SFX.map((s, i) => (
+        <Sequence key={`sfx-${i}`} from={Math.max(0, s.at)} durationInFrames={90} name={`sfx ${s.name}`} layout="none">
+          <Audio src={staticFile(`sfx/${s.name}.wav`)} volume={s.volume} />
+        </Sequence>
+      ))}
       {SCENES.map((s) => {
         const View = VIEWS[s.id];
         // The end card shows the closing words itself, so captions stop there.
@@ -80,9 +87,16 @@ export function ClipPayDemo({ showCaptions }: { showCaptions: boolean }) {
   );
 }
 
+function ThumbnailStill() {
+  useFonts();
+  return <Thumbnail />;
+}
+
 export function Root() {
   return (
-    <Composition
+    <>
+      <Composition id="Thumbnail" component={ThumbnailStill} durationInFrames={1} fps={FPS} width={WIDTH} height={HEIGHT} />
+      <Composition
       id="ClipPayDemo"
       component={ClipPayDemo}
       durationInFrames={TOTAL_FRAMES}
@@ -90,6 +104,7 @@ export function Root() {
       width={WIDTH}
       height={HEIGHT}
       defaultProps={{ showCaptions: true }}
-    />
+      />
+    </>
   );
 }

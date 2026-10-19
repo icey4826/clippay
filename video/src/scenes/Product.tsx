@@ -1,4 +1,4 @@
-// Scenes 4–6: the claim code, Gemini's grade, and the rules engine that sets the price.
+// Scenes 4–6: the claim code, the AI grade, and the rules engine that sets the price.
 
 import type { ReactNode } from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
@@ -125,14 +125,14 @@ export function Grade() {
       <div style={{ position: "absolute", left: 1120, top: 160, width: 690 }}>
         <Kicker at={2}>Step 2 · Grade</Kicker>
         <div style={{ height: 18 }} />
-        <Words text="Gemini reads the photo." at={5} style={{ fontSize: 62, fontWeight: 700, letterSpacing: "-0.035em", lineHeight: 1.04 }} />
+        <Words text="AI reads the photo." at={5} style={{ fontSize: 62, fontWeight: 700, letterSpacing: "-0.035em", lineHeight: 1.04 }} />
         <div style={{ height: 34 }} />
         <Card style={{ padding: "14px 34px 18px" }}>
           {rows.map((r, i) => (
             <Finding key={r.label} {...r} last={i === rows.length - 1} />
           ))}
         </Card>
-        <div style={{ ...useRise(cDamage, 14), marginTop: 22, fontFamily: MONO, fontSize: 21, color: C.faint }}>gemini-3.5-flash · structured JSON grade</div>
+        <div style={{ ...useRise(cDamage, 14), marginTop: 22, fontFamily: MONO, fontSize: 21, color: C.faint }}>vision model · structured JSON grade</div>
       </div>
     </AbsoluteFill>
   );
@@ -204,7 +204,7 @@ export function Rules() {
 
       {/* Grade → rules engine → offer */}
       <Card style={{ ...gradeIn, position: "absolute", left: 110, top: 250, width: 430, padding: "30px 34px" }}>
-        <Label icon="spark">Gemini grade</Label>
+        <Label icon="spark">AI grade</Label>
         <KV k="Severity" v={<Pill tone="warn" size={24}>Minor</Pill>} />
         <KV k="Damage" v="Chip · rim" />
         <KV k="Confidence" v="High" />

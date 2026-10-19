@@ -5,6 +5,8 @@
     "studio": "remotion studio src/index.ts",
     "capture": "node --import ../node_modules/tsx/dist/loader.mjs scripts/capture-screens.ts",
     "render": "remotion render src/index.ts ClipPayDemo out/clippay-demo.mp4 --codec h264 --crf 18 --audio-bitrate 256k",
+    "thumbnail": "remotion still src/index.ts Thumbnail out/thumbnail.png --scale 0.6666667",
+    "sfx": "python3 scripts/make-sfx.py",
     "still": "remotion still src/index.ts ClipPayDemo",
     "record-live": "node --import ../node_modules/tsx/dist/loader.mjs scripts/record-live.ts",
     "assemble-live": "node scripts/assemble-live.mjs"

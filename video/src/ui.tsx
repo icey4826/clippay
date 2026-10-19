@@ -481,7 +481,29 @@ export function Cursor({ keys, appear = 0 }: { keys: CursorKey[]; appear?: numbe
 }
 
 /** Rounded highlight ring drawn around a rectangle (screen coordinates), with an optional label. */
-export function Ring({ at, x, y, w, h, label, color = C.brand, labelSide = "top" }: { at: number; x: number; y: number; w: number; h: number; label?: string; color?: string; labelSide?: "top" | "bottom" }) {
+export function Ring({
+  at,
+  x,
+  y,
+  w,
+  h,
+  label,
+  color = C.brand,
+  labelSide = "top",
+  labelSize = 18,
+  labelAlign = "left",
+}: {
+  at: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label?: string;
+  color?: string;
+  labelSide?: "top" | "bottom";
+  labelSize?: number;
+  labelAlign?: "left" | "right";
+}) {
   const p = useIn(at, { damping: 16, stiffness: 140 });
   const frame = useCurrentFrame();
   if (frame < at) return null;
@@ -492,7 +514,7 @@ export function Ring({ at, x, y, w, h, label, color = C.brand, labelSide = "top"
         <div
           style={{
             position: "absolute",
-            left: 0,
+            [labelAlign]: 0,
             [labelSide === "top" ? "bottom" : "top"]: "100%",
             margin: "8px 0",
             padding: "4px 12px",
@@ -500,7 +522,7 @@ export function Ring({ at, x, y, w, h, label, color = C.brand, labelSide = "top"
             background: color,
             color: "#fff",
             fontFamily: SANS,
-            fontSize: 18,
+            fontSize: labelSize,
             fontWeight: 600,
             whiteSpace: "nowrap",
           }}
