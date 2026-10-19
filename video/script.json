@@ -1,0 +1,46 @@
+{
+  "voice": "Charon",
+  "ttsModel": "gemini-3.1-flash-tts-preview",
+  "scenes": [
+    {
+      "id": "hook",
+      "vo": "A forty-dollar mug set arrives with a chip on the rim. Today, that means a return: a label, a trip to the post office, and a week of waiting for your money."
+    },
+    {
+      "id": "cost",
+      "vo": "For the store, it's worse. They refund all forty dollars, pay eight more to ship back a mug they'll throw away, and still lose a little of the customer's trust."
+    },
+    {
+      "id": "reveal",
+      "vo": "ClipPay settles damage claims with one photo and a partial PayPal refund. The buyer keeps the item. Nothing gets shipped back."
+    },
+    {
+      "id": "proof",
+      "vo": "The buyer opens their claim and gets a four-character code. They write it on paper and photograph it next to the damage. That proves the photo is fresh, and that it's theirs."
+    },
+    {
+      "id": "grade",
+      "vo": "Gemini looks at the photo: what's damaged, where, how badly, whether it's a real photo, and whether the code matches."
+    },
+    {
+      "id": "rules",
+      "vo": "But the AI never sets the price. A rules engine turns the grade into an offer using the merchant's own policy: a percentage for each severity, a ceiling, and an auto-approve limit. Thirty-five tests make sure the model can never talk its way into a bigger refund."
+    },
+    {
+      "id": "offer",
+      "vo": "The buyer sees one clear offer. They can accept it, or counter once. A small counter is approved on the spot. Anything bigger goes to a person."
+    },
+    {
+      "id": "refund",
+      "vo": "Then PayPal sends a partial refund on the original payment, with an idempotency key, so a retry can never pay twice. Photo to money in under a minute."
+    },
+    {
+      "id": "merchant",
+      "vo": "Merchants see every claim in one dashboard: what they refunded, what they saved compared with full returns, and a short queue of claims that need a human, like a missing code or a reused photo."
+    },
+    {
+      "id": "close",
+      "vo": "It's live today on Cloudflare, with PayPal payments and Gemini grading. ClipPay. Keep the item. Keep the customer."
+    }
+  ]
+}

@@ -155,10 +155,11 @@ Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`) are in `wrangler.j
 - `src/middleware.ts`: basic auth for the merchant pages.
 - `scripts/seed-demo.ts`: demo claims for the dashboard.
 - `src/lib/rules.ts`: rules engine (offer, review or ineligible; one-round counter). Tests in `rules.test.ts`.
+- `video/`: the demo video (Remotion). Narration and music from Google AI Studio; see `video/STORYBOARD.md`.
 
 ## Timeline
 
 - **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
 - **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests); claim page wired to grading and refunds ✅ (verified Oct 19: real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
 - **Week 3 (Nov 2–8):** AG Grid dashboard with approve / decline / retry ✅; near-duplicate photo check (dHash) ✅; merchant basic auth ✅; seeded demo claims ✅; UI redesign ✅. Deployed to Cloudflare Workers with D1 and the Images binding ✅ (verified Oct 19: live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
-- **Nov 9–12:** README, video, submit by Nov 11.
+- **Nov 9–12:** README, video, submit by Nov 11. Demo video rendered ✅ (Oct 19: 2:08, captions, Gemini TTS narration, Lyria music).
