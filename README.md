@@ -28,7 +28,7 @@ cp .env.example .env
 2. Paste the app's Client ID and Secret into `.env`.
 3. Under **Testing Tools → Sandbox Accounts**, note the default **Personal** (buyer) account. You'll log in with it to approve test payments.
 
-## Week 1: sandbox refund check
+## PayPal sandbox refund check
 
 ```bash
 npm run paypal:week1
@@ -47,7 +47,7 @@ Options:
 
 Refunds send a `PayPal-Request-Id`, so re-running the same refund doesn't refund twice.
 
-## Week 1: damage grading prototype
+## Damage grading
 
 The grader sends claim photos to Gemini (Google AI Studio) and gets back strict JSON, validated with zod:
 defects (type, location, severity), overall severity, functional impact, confidence, whether it's a real
@@ -70,7 +70,7 @@ Newer Flash models also worked but took 30–120s on the free tier under load (O
 
 Free-tier note: Google may use free-tier inputs to improve its products. Use test photos only, and a paid key for real buyer photos.
 
-## Week 2: rules engine
+## Rules engine
 
 `src/lib/rules.ts` turns a grade plus the merchant's policy into a decision. It has no I/O and no
 model calls, and all money is integer cents, so the AI never decides an amount.
@@ -84,7 +84,7 @@ model calls, and all money is integer cents, so the AI never decides an amount.
 npm test
 ```
 
-## Week 2: claim flow
+## Claim flow
 
 ```bash
 npm run dev
@@ -102,7 +102,7 @@ The buyer never sees fraud signals. A claim that goes to review just says a pers
 
 Orders, claims and resized photos are stored in `data/` (gitignored). Duplicate photos are caught by exact SHA-256 match and by a 64-bit difference hash (dHash): a photo within 6 bits of an earlier claim's photo, for example the same picture resized or recompressed, goes to review.
 
-## Week 3: merchant dashboard
+## Merchant dashboard
 
 ```bash
 npm run seed:demo            # 10 demo claims, decided by the real rules engine
@@ -144,7 +144,7 @@ Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`) are in `wrangler.j
 ## Code
 
 - `src/lib/paypal.ts`: fetch-only PayPal client (OAuth, orders, capture, refund). Works in Node, Next.js and Cloudflare Workers.
-- `scripts/paypal-week1.ts`: the Week 1 end-to-end script.
+- `scripts/paypal-week1.ts`: end-to-end sandbox check (create, capture, partial refund).
 - `src/lib/grading.ts`: Gemini damage grader (schema, prompt, retries, code check).
 - `scripts/grade-photos.ts`: grades every photo in `samples/` and checks consistency.
 - `src/lib/claims.ts`: claim workflow (checkout, code, grading, decision, counter, refund) and the buyer-safe view.
@@ -159,9 +159,16 @@ Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`) are in `wrangler.j
 - `src/lib/rules.ts`: rules engine (offer, review or ineligible; one-round counter). Tests in `rules.test.ts`.
 - `video/`: the demo video (Remotion). Narration and music from Google AI Studio, sound effects synthesized by `video/scripts/make-sfx.py`; see `video/STORYBOARD.md`.
 
-## Timeline
+## Build log
 
-- **Week 1 (Oct 18–25):** sandbox create → capture → partial refund ✅ (verified Oct 18: $40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`); vision grading prototype ✅ (pipeline verified on a synthetic photo; still needs 15–20 real damaged-item photos).
-- **Week 2 (Oct 26–Nov 1):** rules engine + one-round counter ✅ (35 unit tests); claim page wired to grading and refunds ✅ (verified Oct 19: real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
-- **Week 3 (Nov 2–8):** AG Grid dashboard with approve / decline / retry ✅; near-duplicate photo check (dHash) ✅; merchant basic auth ✅; seeded demo claims ✅; UI redesign ✅. Deployed to Cloudflare Workers with D1 and the Images binding ✅ (verified Oct 19: live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
-- **Nov 9–12:** README, video, submit by Nov 11. Demo video rendered and published ✅ (Oct 19: 2:38, captions, Gemini TTS narration, Lyria music, synthesized sound effects, live sandbox segment; https://youtu.be/JlZoRbaNCbg).
+All work was done during the hackathon (project started Oct 18, 2026).
+
+- **Oct 18:** PayPal sandbox client; create → capture → partial refund verified ($40 captured, $12 refunded, capture `PARTIALLY_REFUNDED`).
+- **Oct 19:** Gemini damage grader; rules engine with one-round counter; claim flow wired to grading and refunds (real photo with code, $4 offer, $7 counter auto-accepted, capture `PARTIALLY_REFUNDED`).
+- **Oct 19:** AG Grid merchant dashboard with approve / decline / retry, near-duplicate photo check (dHash), merchant basic auth, seeded demo claims and UI redesign.
+- **Oct 19:** deployed to Cloudflare Workers with D1 and the Images binding (live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
+- **Oct 19:** demo video published (2:38, captions, Gemini TTS narration, Lyria music, synthesized sound effects, live sandbox segment): https://youtu.be/JlZoRbaNCbg.
+
+42 unit tests cover the rules engine and the photo checks (`npm test`).
+
+Known limitation: grading has been checked on a small set of photos so far; a larger set of real damaged-item photos is the next step.
