@@ -1,19 +1,21 @@
 "use client";
 
-import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type ICellRendererParams } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type GridApi, type ICellRendererParams, type RowStyle } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { AlertTriangle, Check, Clock, PiggyBank, RotateCw, ShieldCheck, Wallet, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, Download, PiggyBank, RotateCw, Search, ShieldCheck, Wallet, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ProductArt } from "@/components/ProductArt";
 import { Badge, Button, Card, cx, Eyebrow } from "@/components/ui";
 import { formatCents } from "@/lib/catalog";
 import type { MerchantRow, MerchantStats } from "@/lib/merchant";
 import type { MerchantPolicy } from "@/lib/rules";
+import ClaimCharts, { matchesChartFilter, severityLabel, type ChartFilter } from "./ClaimCharts";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const gridTheme = themeQuartz.withParams({
+  browserColorScheme: "inherit", // keep the page's "only light" so Chrome's forced dark mode skips the grid
   fontFamily: "inherit",
   fontSize: 13,
   headerFontSize: 12,
@@ -76,58 +78,96 @@ function seconds(s: number | null) {
 
 type Filter = "all" | "review" | "refunded" | "other";
 
+const inTab = (r: MerchantRow, f: Filter) =>
+  f === "all"
+    ? true
+    : f === "review"
+      ? r.status === "review" || r.status === "refund_failed"
+      : f === "refunded"
+        ? r.status === "refunded"
+        : !["review", "refund_failed", "refunded"].includes(r.status);
+
+const TOTAL_ID = "__total";
+const isTotal = (p: { node?: { rowPinned?: string | null } | null }) => !!p.node?.rowPinned;
+
+// The pinned bottom row sums whatever the grid is showing after tabs, chart, search and column filters.
+function totalRow(rows: MerchantRow[]): MerchantRow {
+  const sum = (pick: (r: MerchantRow) => number | null) => rows.reduce((s, r) => s + (pick(r) ?? 0), 0);
+  const settled = rows.filter((r) => r.settleSeconds != null).map((r) => r.settleSeconds!).sort((a, b) => a - b);
+  return {
+    id: TOTAL_ID,
+    productName: `${rows.length} claim${rows.length === 1 ? "" : "s"}`,
+    refundedCents: sum((r) => r.refundedCents),
+    savingsCents: sum((r) => r.savingsCents),
+    settleSeconds: settled.length ? settled[Math.floor(settled.length / 2)] : null,
+    reasons: [],
+  } as unknown as MerchantRow;
+}
+
+const dateFilterParams = {
+  comparator: (day: Date, cell: string | null) => {
+    if (!cell) return -1;
+    const d = new Date(cell);
+    const local = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return local === day.getTime() ? 0 : local < day.getTime() ? -1 : 1;
+  },
+};
+
 export default function Dashboard({ rows, stats, policy }: { rows: MerchantRow[]; stats: MerchantStats; policy: MerchantPolicy }) {
+  const gridRef = useRef<AgGridReact<MerchantRow>>(null);
   const [selectedId, setSelectedId] = useState<string | null>(rows.find((r) => r.status === "review")?.id ?? rows[0]?.id ?? null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [chartFilter, setChartFilter] = useState<ChartFilter | null>(null);
+  const [search, setSearch] = useState("");
+  const [shown, setShown] = useState(rows.length);
   const selected = rows.find((r) => r.id === selectedId) ?? null;
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) =>
-        filter === "all"
-          ? true
-          : filter === "review"
-            ? r.status === "review" || r.status === "refund_failed"
-            : filter === "refunded"
-              ? r.status === "refunded"
-              : !["review", "refund_failed", "refunded"].includes(r.status),
-      ),
-    [rows, filter],
-  );
+  const filtered = useMemo(() => rows.filter((r) => inTab(r, filter) && matchesChartFilter(r, chartFilter)), [rows, filter, chartFilter]);
 
   const columns = useMemo<ColDef<MerchantRow>[]>(
     () => [
       {
         headerName: "Filed",
         field: "submittedAt",
-        width: 110,
+        width: 96,
         sort: "desc",
+        filter: "agDateColumnFilter",
+        filterParams: dateFilterParams,
         valueFormatter: (p) =>
-          p.value ? new Date(p.value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "–",
+          isTotal(p) ? "Total" : p.value ? new Date(p.value).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "–",
+        tooltipValueGetter: (p) => (p.value && !isTotal(p) ? new Date(p.value).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : undefined),
+        cellClass: (p) => (isTotal(p) ? "font-semibold" : undefined),
       },
       {
         headerName: "Item",
         field: "productName",
-        flex: 1.3,
-        minWidth: 160,
-        cellRenderer: (p: ICellRendererParams<MerchantRow>) => (
-          <span className="flex items-center gap-2.5">
-            <ProductArt sku={p.data!.productSku} className="h-7 w-9 shrink-0 rounded-md" />
-            <span className="truncate">{p.value}</span>
-            {p.data!.demo && <span className="text-[10px] font-semibold uppercase tracking-wide text-faint">demo</span>}
-          </span>
-        ),
+        width: 170,
+        tooltipValueGetter: (p) => (isTotal(p) ? undefined : `${p.value}${p.data?.demo ? " (demo data)" : ""}`),
+        pinned: "left",
+        cellRenderer: (p: ICellRendererParams<MerchantRow>) =>
+          isTotal(p) ? (
+            <span className="font-semibold">{p.value}</span>
+          ) : (
+            <span className="flex items-center gap-2.5">
+              <ProductArt sku={p.data!.productSku} className="h-7 w-9 shrink-0 rounded-md" />
+              <span className="truncate">{p.value}</span>
+            </span>
+          ),
       },
       {
         headerName: "Status",
         field: "status",
-        width: 150,
+        width: 142,
+        valueFormatter: (p) => (isTotal(p) ? "" : STATUS[p.value as MerchantRow["status"]].label),
+        filterValueGetter: (p) => STATUS[p.data!.status].label,
+        getQuickFilterText: (p) => STATUS[p.data.status].label,
         cellRenderer: (p: ICellRendererParams<MerchantRow>) => {
+          if (isTotal(p)) return null;
           const r = p.data!;
           const s = STATUS[r.status];
           const by = r.status === "refunded" && r.resolution ? (r.resolution === "merchant" ? "by you" : "auto") : null;
           return (
-            <span className="flex items-center gap-1.5">
+            <span className="flex h-full items-center gap-1.5">
               <Badge tone={s.tone}>{s.label}</Badge>
               {by && <span className="text-[11px] text-faint">{by}</span>}
             </span>
@@ -137,21 +177,25 @@ export default function Dashboard({ rows, stats, policy }: { rows: MerchantRow[]
       {
         headerName: "Severity",
         field: "severity",
-        width: 95,
-        valueFormatter: (p) => (p.value ? String(p.value).replace(/^./, (c) => c.toUpperCase()) : "–"),
+        width: 92,
+        valueFormatter: (p) => (isTotal(p) ? "" : p.value ? severityLabel(String(p.value)) : "–"),
       },
       {
         headerName: "Flags",
         field: "reasons",
         flex: 1,
-        minWidth: 120,
+        minWidth: 116,
         sortable: false,
         valueFormatter: (p) => (p.value as MerchantRow["reasons"]).map((r) => REASON_LABEL[r.code] ?? r.code).join(", "),
+        filterValueGetter: (p) => p.data!.reasons.map((r) => REASON_LABEL[r.code] ?? r.code).join(", "),
+        getQuickFilterText: (p) => p.data.reasons.map((r) => REASON_LABEL[r.code] ?? r.code).join(" "),
+        tooltipValueGetter: (p) => (isTotal(p) ? undefined : p.data?.reasons.map((r) => `${REASON_LABEL[r.code] ?? r.code}: ${r.message}`).join("\n") || undefined),
         cellRenderer: (p: ICellRendererParams<MerchantRow>) => {
+          if (isTotal(p)) return null;
           const reasons = p.data!.reasons;
           if (!reasons.length) return <span className="text-faint">–</span>;
           return (
-            <span className="flex gap-1 overflow-hidden">
+            <span className="flex h-full items-center gap-1 overflow-hidden">
               {reasons.map((r) => (
                 <Badge key={r.code} tone={r.code === "NO_DAMAGE_VISIBLE" || r.code === "ORDER_TOO_OLD" ? "neutral" : "warn"}>
                   {REASON_LABEL[r.code] ?? r.code}
@@ -163,26 +207,82 @@ export default function Dashboard({ rows, stats, policy }: { rows: MerchantRow[]
       },
       {
         headerName: "Refund",
-        field: "refundedCents",
-        width: 95,
+        colId: "refund",
+        width: 88,
         type: "rightAligned",
-        valueGetter: (p) => p.data?.refundedCents ?? p.data?.offerCents ?? null,
+        filter: "agNumberColumnFilter",
+        valueGetter: (p) => (p.data ? (p.data.refundedCents ?? p.data.offerCents ?? null) : null),
+        filterValueGetter: (p) => ((p.data!.refundedCents ?? p.data!.offerCents) ?? 0) / 100,
+        valueFormatter: (p) => money(p.value, p.data?.currency),
         cellRenderer: (p: ICellRendererParams<MerchantRow>) => {
           const r = p.data!;
-          if (r.refundedCents != null) return <span className="font-medium tabular-nums">{money(r.refundedCents, r.currency)}</span>;
-          return <span className="tabular-nums text-faint">{money(r.offerCents, r.currency)}</span>;
+          if (isTotal(p) || r.refundedCents != null) return <span className="font-medium tabular-nums">{money(r.refundedCents, r.currency)}</span>;
+          return (
+            <span className="tabular-nums text-faint" title="Offered or suggested, not paid">
+              {money(r.offerCents, r.currency)}
+            </span>
+          );
         },
       },
+      {
+        headerName: "Kept",
+        headerTooltip: "Price not refunded plus the return shipping a full return would have cost",
+        field: "savingsCents",
+        width: 84,
+        type: "rightAligned",
+        filter: "agNumberColumnFilter",
+        filterValueGetter: (p) => (p.data!.savingsCents ?? 0) / 100,
+        valueFormatter: (p) => money(p.value, p.data?.currency),
+        cellClass: (p) => cx("tabular-nums", p.value != null && "text-good", isTotal(p) && "font-semibold"),
+      },
+      {
+        headerName: "Settled by",
+        field: "resolution",
+        hide: true,
+        valueFormatter: (p) => (isTotal(p) ? "" : p.data?.status === "refunded" || p.data?.status === "denied" ? (p.value === "merchant" ? "You" : p.value ? "Auto" : "–") : "–"),
+        filterValueGetter: (p) => (p.data!.resolution === "merchant" ? "You" : p.data!.resolution ? "Auto" : ""),
+      },
+      {
+        headerName: "Time",
+        headerTooltip: "From photo to money (or decision). The total row shows the median.",
+        field: "settleSeconds",
+        width: 76,
+        type: "rightAligned",
+        filter: "agNumberColumnFilter",
+        valueFormatter: (p) => (isTotal(p) && p.value != null ? `≈ ${seconds(p.value)}` : seconds(p.value)),
+        cellClass: "tabular-nums",
+      },
+      { headerName: "Buyer", field: "buyer", hide: true },
+      { headerName: "PayPal order", field: "orderId", hide: true },
+      { headerName: "PayPal refund", field: "refundId", hide: true },
     ],
     [],
   );
 
+  const defaultColDef = useMemo<ColDef<MerchantRow>>(() => ({ filter: true, resizable: true, sortable: true, suppressHeaderMenuButton: false }), []);
+
   const counts = {
-    all: rows.length,
-    review: rows.filter((r) => r.status === "review" || r.status === "refund_failed").length,
-    refunded: rows.filter((r) => r.status === "refunded").length,
-    other: rows.filter((r) => !["review", "refund_failed", "refunded"].includes(r.status)).length,
+    all: rows.filter((r) => matchesChartFilter(r, chartFilter)).length,
+    review: rows.filter((r) => inTab(r, "review") && matchesChartFilter(r, chartFilter)).length,
+    refunded: rows.filter((r) => inTab(r, "refunded") && matchesChartFilter(r, chartFilter)).length,
+    other: rows.filter((r) => inTab(r, "other") && matchesChartFilter(r, chartFilter)).length,
   };
+
+  const chartLabel =
+    chartFilter && (chartFilter.kind === "severity" ? `${severityLabel(chartFilter.value)} damage` : chartFilter.value);
+
+  function refreshTotals(api: GridApi<MerchantRow>) {
+    const visible: MerchantRow[] = [];
+    api.forEachNodeAfterFilterAndSort((n) => n.data && visible.push(n.data));
+    api.setGridOption("pinnedBottomRowData", [totalRow(visible)]);
+    setShown(visible.length);
+  }
+
+  function select(api: GridApi<MerchantRow>, id: string | undefined) {
+    if (!id || id === TOTAL_ID) return;
+    setSelectedId(id);
+    api.getRowNode(id)?.setSelected(true, true);
+  }
 
   return (
     <div className="space-y-6 pt-4">
@@ -219,22 +319,60 @@ export default function Dashboard({ rows, stats, policy }: { rows: MerchantRow[]
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
-        <Card className="overflow-hidden">
-          <div className="flex gap-1 border-b border-line px-3 py-2">
-            {(["all", "review", "refunded", "other"] as const).map((f) => (
+      {rows.length > 0 && <ClaimCharts rows={rows} filter={chartFilter} onFilter={setChartFilter} />}
+
+      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        <Card className="min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
+            <div className="flex gap-1">
+              {(["all", "review", "refunded", "other"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={cx(
+                    "rounded-full px-3 py-1.5 text-xs font-medium",
+                    filter === f ? "bg-ink text-white" : "text-muted hover:bg-ink/5",
+                  )}
+                >
+                  {{ all: "All", review: "Needs action", refunded: "Refunded", other: "Other" }[f]}
+                  <span className="ml-1.5 opacity-60">{counts[f]}</span>
+                </button>
+              ))}
+            </div>
+            {chartFilter && (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cx(
-                  "rounded-full px-3 py-1.5 text-xs font-medium",
-                  filter === f ? "bg-ink text-white" : "text-muted hover:bg-ink/5",
-                )}
+                onClick={() => setChartFilter(null)}
+                className="flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-ink hover:bg-brand/15"
+                aria-label={`Clear chart filter ${chartLabel}`}
               >
-                {{ all: "All", review: "Needs action", refunded: "Refunded", other: "Other" }[f]}
-                <span className="ml-1.5 opacity-60">{counts[f]}</span>
+                {chartLabel} <X className="h-3 w-3" />
               </button>
-            ))}
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+                <input
+                  aria-label="Search claims"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search buyer, item, flag…"
+                  className="h-8 w-48 rounded-full border border-line bg-surface pl-8 pr-3 text-xs outline-none focus:border-brand"
+                />
+              </label>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={rows.length === 0}
+                onClick={() =>
+                  gridRef.current?.api.exportDataAsCsv({
+                    fileName: `clippay-claims-${new Date().toISOString().slice(0, 10)}.csv`,
+                    allColumns: true,
+                  })
+                }
+              >
+                <Download className="h-3.5 w-3.5" /> CSV
+              </Button>
+            </div>
           </div>
           {rows.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
@@ -243,20 +381,44 @@ export default function Dashboard({ rows, stats, policy }: { rows: MerchantRow[]
           ) : (
             <div className="h-[560px]">
               <AgGridReact<MerchantRow>
+                ref={gridRef}
                 theme={gridTheme}
                 rowData={filtered}
                 columnDefs={columns}
+                defaultColDef={defaultColDef}
                 getRowId={(p) => p.data.id}
+                quickFilterText={search}
+                includeHiddenColumnsInQuickFilter
                 rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true }}
-                onRowClicked={(e) => setSelectedId(e.data?.id ?? null)}
+                onRowClicked={(e) => select(e.api, e.data?.id)}
+                // Arrow keys walk through claims and the detail panel follows.
+                onCellFocused={(e) => {
+                  if (e.rowPinned || e.rowIndex == null) return;
+                  select(e.api, e.api.getDisplayedRowAtIndex(e.rowIndex)?.data?.id);
+                }}
                 onFirstDataRendered={(e) => {
                   if (selectedId) e.api.getRowNode(selectedId)?.setSelected(true);
                 }}
+                onModelUpdated={(e) => refreshTotals(e.api)}
+                getRowStyle={(p): RowStyle | undefined =>
+                  p.node.rowPinned
+                    ? { background: "#faf9f6" }
+                    : p.data?.status === "review" || p.data?.status === "refund_failed"
+                      ? { boxShadow: "inset 3px 0 0 #e08a00" }
+                      : undefined
+                }
+                tooltipShowDelay={250}
+                overlayNoRowsTemplate="No claims match these filters."
                 rowHeight={46}
                 headerHeight={40}
                 animateRows
               />
             </div>
+          )}
+          {rows.length > 0 && (
+            <p className="border-t border-line px-4 py-2 text-[11px] text-faint">
+              Showing {shown} of {rows.length}. Column menus filter and sort; the total row follows every filter. ↑/↓ moves through claims.
+            </p>
           )}
         </Card>
 

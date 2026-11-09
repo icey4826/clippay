@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
@@ -13,6 +13,9 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Light only (designed for the projector); also stops Chrome forcing dark mode onto the charts.
+export const viewport: Viewport = { colorScheme: "only light" };
 
 export const metadata: Metadata = {
   title: "ClipPay",

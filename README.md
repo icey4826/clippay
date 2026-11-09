@@ -15,7 +15,7 @@ Built for the PayPal AI hackathon (deadline Nov 12, 2026).
 4. A rules engine (not the AI) turns the grade into an offer using the merchant's policy.
 5. Buyer accepts or counters once; anything above the ceiling goes to merchant review.
 6. On acceptance, a partial refund is issued on the captured payment (Payments v2 refund).
-7. The merchant dashboard (AG Grid) shows claims, grades, refunds and savings versus full returns.
+7. The merchant dashboard (AG Grid + AG Charts) shows claims, grades, refunds and savings versus full returns. Clicking a chart filters the grid.
 
 ## Setup
 
@@ -112,7 +112,15 @@ npm run seed:demo -- --reset # remove demo data only
 Open http://localhost:3000/merchant:
 
 - **Headline numbers:** total refunded, savings against full returns (price plus return shipping), share settled automatically, median time from photo to refund, and claims waiting for review.
-- **Claims grid** (AG Grid): filter by All / Needs action / Refunded / Other; click a row for the detail panel.
+- **Charts** (AG Charts Community): where claims ended up (auto-settled, settled by you, needs review, declined, ineligible), money refunded vs. kept for each item, and claims by the severity the AI graded. Each chart is a filter: click a slice or bar to narrow the grid, click again to clear it.
+- **Claims grid** (AG Grid Community):
+  - tabs for All / Needs action / Refunded / Other, which combine with the chart filter
+  - quick search across item, status, flags, buyer and PayPal IDs, plus a filter menu on every column (date, number and text filters)
+  - a pinned total row (claims, refunded, kept, median time) that follows every filter
+  - tooltips that explain each flag
+  - claims needing review marked with an amber edge
+  - ↑/↓ moves through claims and the detail panel follows
+  - CSV export of every column, including buyer, PayPal order and refund IDs
 - **Detail panel:** photos, the reasons a claim went to review, the AI grade, the buyer's description and how it was settled.
 - **Actions:** approve a review claim for any amount up to what's left on the capture (with an optional note), decline it, or retry a failed or stuck refund. All refunds keep the `refund-<claimId>` request id.
 
@@ -151,6 +159,7 @@ Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`, `MAX_CLAIMS_PER_90
 - `src/lib/store.ts`: store for orders and claims (JSON file locally, D1 on Workers).
 - `src/lib/photos.ts`, `images-node.ts`, `images-cf.ts`: photo prep and storage for each runtime.
 - `src/lib/merchant.ts`: dashboard rows and headline numbers.
+- `src/app/merchant/Dashboard.tsx`, `ClaimCharts.tsx`: AG Grid claims grid, AG Charts overview and the claim detail panel.
 - `src/lib/images.ts`: photo resize, SHA-256 and dHash. Tests in `images.test.ts`.
 - `src/app/`: shop, receipt, claim and merchant pages; API routes under `src/app/api/`.
 - `src/components/`: shared UI (buttons, cards, badges, steps) and product illustrations.
@@ -168,6 +177,7 @@ All work was done during the hackathon (project started Oct 18, 2026).
 - **Oct 19:** AG Grid merchant dashboard with approve / decline / retry, near-duplicate photo check (dHash), merchant basic auth, seeded demo claims and UI redesign.
 - **Oct 19:** deployed to Cloudflare Workers with D1 and the Images binding (live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
 - **Oct 19:** demo video published (2:38, captions, Gemini TTS narration, Lyria music, synthesized sound effects, live sandbox segment): https://youtu.be/JlZoRbaNCbg.
+- **Nov 8:** AG Charts overview that filters the grid; grid search, column filters, pinned totals, flag tooltips, keyboard navigation and CSV export.
 
 44 unit tests cover the rules engine and the photo checks (`npm test`).
 

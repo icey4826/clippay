@@ -2,7 +2,8 @@
 
 /* ClipPay design tokens. One light theme: the demo is filmed and shown on a projector. */
 :root {
-  color-scheme: light;
+  /* "only" also opts out of Chrome's forced dark mode, which can't recolor the canvas charts. */
+  color-scheme: only light;
   --paper: #f6f4ef;
   --surface: #ffffff;
   --ink: #15171c;
