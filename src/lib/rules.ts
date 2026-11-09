@@ -37,6 +37,16 @@ export const DEFAULT_POLICY: MerchantPolicy = {
   counterHeadroomPct: 10,
 };
 
+/**
+ * The policy with deployment overrides applied. Pure: pass the env in.
+ * MAX_CLAIMS_PER_90_DAYS lets a shared demo (one sandbox buyer for every judge) avoid the repeat-claimer review.
+ */
+export function policyFromEnv(env: Record<string, string | undefined>, base: MerchantPolicy = DEFAULT_POLICY): MerchantPolicy {
+  const raw = env.MAX_CLAIMS_PER_90_DAYS?.trim();
+  const n = raw ? Number(raw) : NaN;
+  return Number.isInteger(n) && n >= 0 ? { ...base, maxClaimsPer90Days: n } : base;
+}
+
 export const PAYPAL_MAX_REFUND_AGE_DAYS = 180;
 
 export interface OrderInfo {

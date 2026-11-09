@@ -6,6 +6,7 @@ import {
   decideOffer,
   estimateSavingsCents,
   evaluateCounter,
+  policyFromEnv,
   type ClaimSignals,
   type Decision,
   type MerchantPolicy,
@@ -252,5 +253,20 @@ describe("estimateSavingsCents", () => {
   it("counts the refund avoided plus return shipping", () => {
     assert.equal(estimateSavingsCents(order(), 800), 4000 - 800 + 800);
     assert.equal(estimateSavingsCents(order(), 800, 0), 3200);
+  });
+});
+
+describe("policyFromEnv", () => {
+  it("keeps the default when the override is missing or invalid", () => {
+    assert.equal(policyFromEnv({}), DEFAULT_POLICY);
+    assert.equal(policyFromEnv({ MAX_CLAIMS_PER_90_DAYS: "" }), DEFAULT_POLICY);
+    assert.equal(policyFromEnv({ MAX_CLAIMS_PER_90_DAYS: "lots" }), DEFAULT_POLICY);
+    assert.equal(policyFromEnv({ MAX_CLAIMS_PER_90_DAYS: "-1" }), DEFAULT_POLICY);
+  });
+
+  it("overrides only the repeat-claim limit", () => {
+    const p = policyFromEnv({ MAX_CLAIMS_PER_90_DAYS: "1000" });
+    assert.equal(p.maxClaimsPer90Days, 1000);
+    assert.deepEqual({ ...p, maxClaimsPer90Days: DEFAULT_POLICY.maxClaimsPer90Days }, DEFAULT_POLICY);
   });
 });

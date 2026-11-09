@@ -7,7 +7,7 @@ import { graderFromEnv, type Grade, type ImageInput } from "./grading";
 import { hashDistance, NEAR_DUPLICATE_BITS, sha256, type PreparedPhoto } from "./images";
 import { approveLink, centsToMoney, firstCapture, moneyToCents, payPalFromEnv, PayPalError } from "./paypal";
 import { preparePhoto, savePhoto } from "./photos";
-import { decideOffer, evaluateCounter, DEFAULT_POLICY, type Decision } from "./rules";
+import { decideOffer, evaluateCounter, policyFromEnv, type Decision } from "./rules";
 import {
   getClaimForOrder,
   getOrderByToken,
@@ -232,7 +232,7 @@ export async function submitClaim(token: string, description: string, uploads: P
         capturedAt: new Date(o.capturedAt),
         alreadyRefundedCents: o.refundedCents,
       },
-      DEFAULT_POLICY,
+      policyFromEnv(process.env),
       now,
     );
 

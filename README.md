@@ -139,7 +139,7 @@ npm run cf:deploy                         # build with OpenNext and deploy
 npm run seed:demo && npm run db:seed-demo # replace the demo claims in D1
 ```
 
-Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`) are in `wrangler.jsonc`.
+Non-secret settings (`APP_URL`, `PAYPAL_ENV`, `GEMINI_MODEL`, `MAX_CLAIMS_PER_90_DAYS`) are in `wrangler.jsonc`. The live demo sets `MAX_CLAIMS_PER_90_DAYS` to 1000 because every judge shares one sandbox buyer account; without it, the repeat-claimer check (2 claims per buyer in 90 days) would send every judge's claim to review.
 
 ## Code
 
@@ -169,6 +169,6 @@ All work was done during the hackathon (project started Oct 18, 2026).
 - **Oct 19:** deployed to Cloudflare Workers with D1 and the Images binding (live claim graded in 8 s, dHash computed on Workers, merchant approve settled).
 - **Oct 19:** demo video published (2:38, captions, Gemini TTS narration, Lyria music, synthesized sound effects, live sandbox segment): https://youtu.be/JlZoRbaNCbg.
 
-42 unit tests cover the rules engine and the photo checks (`npm test`).
+44 unit tests cover the rules engine and the photo checks (`npm test`).
 
 Known limitation: grading has been checked on a small set of photos so far; a larger set of real damaged-item photos is the next step.

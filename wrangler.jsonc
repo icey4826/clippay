@@ -18,6 +18,8 @@
     "APP_URL": "https://clippay.productivityappsforwindows.com",
     "PAYPAL_ENV": "sandbox",
     "GEMINI_MODEL": "gemini-3.5-flash",
-    "GEMINI_THINKING_LEVEL": "low"
+    "GEMINI_THINKING_LEVEL": "low",
+    // Every judge shares one sandbox buyer, so the repeat-claimer check (default 2 per 90 days) is relaxed here.
+    "MAX_CLAIMS_PER_90_DAYS": "1000"
   }
 }
