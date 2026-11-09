@@ -13,9 +13,9 @@
     "grade": "tsx scripts/grade-photos.ts",
     "test": "tsx --test 'src/**/*.test.ts'",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:build": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
+    "cf:preview": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion && opennextjs-cloudflare deploy",
     "db:migrate": "wrangler d1 migrations apply clippay --remote",
     "db:seed-demo": "tsx scripts/export-demo-sql.ts > .open-next/demo.sql && wrangler d1 execute clippay --remote --file .open-next/demo.sql"
   },
